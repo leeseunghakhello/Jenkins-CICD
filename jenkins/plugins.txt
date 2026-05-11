@@ -1,0 +1,7 @@
+git
+gitlab-plugin
+workflow-aggregator
+pipeline-stage-view
+docker-workflow
+credentials-binding
+gitlab-branch-source

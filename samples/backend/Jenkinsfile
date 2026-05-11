@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME     = 'backend'
+        CONTAINER_NAME = 'backend'
+        APP_NETWORK    = 'app-network'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build JAR') {
+            steps {
+                sh 'chmod +x ./gradlew'
+                sh './gradlew clean build -x test'
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -t ${IMAGE_NAME}:latest ."
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh """
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm   ${CONTAINER_NAME} || true
+                    docker run -d \
+                        --name    ${CONTAINER_NAME} \
+                        --network ${APP_NETWORK} \
+                        --restart unless-stopped \
+                        ${IMAGE_NAME}:latest
+                """
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh "docker image prune -f"
+            }
+        }
+    }
+
+    post {
+        success { echo 'Backend deployed successfully!' }
+        failure { echo 'Backend deployment failed!'    }
+    }
+}
